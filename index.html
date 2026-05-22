@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>汉字 — Китайские карточки</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Spectral:ital,wght@0,300;0,600;1,300&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1208;
+    --paper: #f5f0e8;
+    --paper2: #ede7d6;
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --gold: #b8860b;
+    --gold-light: #d4a017;
+    --green: #27ae60;
+    --muted: #8a7d6b;
+    --border: #c8b99a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Spectral', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(184,134,11,0.08) 27px, rgba(184,134,11,0.08) 28px);
+  }
+
+  .header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 3px solid var(--gold);
+  }
+  .header-title { font-family: 'Noto Serif SC', serif; font-size: 22px; letter-spacing: 2px; color: var(--gold-light); }
+  .header-sub { font-family: 'Spectral', serif; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+  .header-right { text-align: right; }
+  .header-count { font-family: 'Source Code Pro', monospace; font-size: 12px; color: var(--gold); }
+  .btn-sync {
+    margin-top: 4px;
+    padding: 4px 10px;
+    background: none;
+    border: 1px solid var(--gold);
+    border-radius: 3px;
+    color: var(--gold-light);
+    font-family: 'Spectral', serif;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-sync:active { background: var(--gold); color: var(--ink); }
+  .btn-sync.spinning { opacity: 0.6; pointer-events: none; }
+
+  .tabs { display: flex; background: var(--paper2); border-bottom: 2px solid var(--border); }
+  .tab {
+    flex: 1; padding: 12px 8px; text-align: center;
+    font-family: 'Spectral', serif; font-size: 13px; letter-spacing: 0.5px;
+    color: var(--muted); cursor: pointer; border: none; background: none;
+    transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); background: var(--paper); font-weight: 600; }
+
+  .screen { display: none; padding: 20px 16px; }
+  .screen.active { display: block; }
+
+  /* SETTINGS */
+  .settings-box {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 4px 4px 0 var(--border);
+  }
+  .settings-title { font-family: 'Noto Serif SC', serif; font-size: 14px; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
+  .field-label { display: block; font-family: 'Source Code Pro', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .field-input {
+    width: 100%; padding: 10px 12px;
+    border: 2px solid var(--border); border-radius: 4px;
+    font-family: 'Spectral', serif; font-size: 13px;
+    background: var(--paper); color: var(--ink); outline: none;
+    transition: border-color 0.15s;
+  }
+  .field-input:focus { border-color: var(--gold); }
+  .btn-primary {
+    width: 100%; padding: 12px;
+    background: var(--ink); color: var(--gold-light);
+    border: none; border-radius: 4px;
+    font-family: 'Spectral', serif; font-size: 14px; letter-spacing: 1px;
+    cursor: pointer; margin-top: 10px; transition: opacity 0.2s;
+  }
+  .btn-primary:active { opacity: 0.8; }
+
+  /* STUDY */
+  .study-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .study-empty .big-char { font-family: 'Noto Serif SC', serif; font-size: 72px; opacity: 0.15; line-height: 1; margin-bottom: 16px; }
+  .study-empty p { font-size: 15px; line-height: 1.6; }
+
+  .progress-bar-wrap { background: var(--paper2); border-radius: 4px; height: 6px; margin-bottom: 20px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); transition: width 0.4s ease; border-radius: 4px; }
+  .progress-label { font-family: 'Source Code Pro', monospace; font-size: 11px; color: var(--muted); text-align: right; margin-bottom: 6px; }
+
+  .card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 16px 14px;
+    text-align: center;
+    margin-bottom: 16px;
+    box-shadow: 4px 4px 0 var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--red), var(--gold)); }
+  .card-mode-label { font-family: 'Source Code Pro', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .card-char { font-family: 'Noto Serif SC', serif; font-size: 52px; line-height: 1.1; color: var(--ink); margin-bottom: 6px; }
+  .card-pinyin { font-family: 'Spectral', serif; font-style: italic; font-size: 18px; color: var(--red); margin-bottom: 4px; min-height: 24px; }
+  .card-ru { font-size: 15px; color: var(--muted); min-height: 20px; }
+
+  .example-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: left;
+    display: none;
+  }
+  .example-box.visible { display: block; }
+  .example-label { font-family: 'Source Code Pro', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+  .example-zh { font-family: 'Noto Serif SC', serif; font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+  .example-ru { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0; }
+  .choice-btn {
+    background: var(--paper2); border: 2px solid var(--border); border-radius: 4px;
+    padding: 10px 10px; font-family: 'Spectral', serif; font-size: 14px;
+    color: var(--ink); cursor: pointer; text-align: left;
+    transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+    min-height: 52px;
+  }
+  .choice-btn:active { transform: scale(0.98); }
+  .choice-btn .choice-letter { font-family: 'Source Code Pro', monospace; font-size: 11px; color: var(--muted); min-width: 16px; }
+  .choice-btn.correct { background: #d4edda; border-color: var(--green); color: #155724; }
+  .choice-btn.wrong { background: #f8d7da; border-color: var(--red); color: #721c24; }
+  .choice-btn:disabled { cursor: default; }
+
+  .feedback { text-align: center; font-size: 14px; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-family: 'Spectral', serif; min-height: 44px; }
+  .feedback.correct { background: #d4edda; color: #155724; }
+  .feedback.wrong { background: #f8d7da; color: #721c24; }
+
+  .btn-next { width: 100%; padding: 14px; background: var(--ink); color: var(--gold-light); border: none; border-radius: 4px; font-family: 'Spectral', serif; font-size: 15px; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s; }
+  .btn-next:active { opacity: 0.8; }
+
+  .mode-selector { display: flex; gap: 8px; margin-bottom: 20px; }
+  .mode-btn { flex: 1; padding: 8px 4px; border: 2px solid var(--border); border-radius: 4px; background: var(--paper2); font-family: 'Spectral', serif; font-size: 12px; color: var(--muted); cursor: pointer; text-align: center; transition: all 0.15s; }
+  .mode-btn.active { background: var(--ink); border-color: var(--ink); color: var(--gold-light); }
+
+  .results-box { background: white; border: 2px solid var(--border); border-radius: 4px; padding: 32px 20px; text-align: center; box-shadow: 4px 4px 0 var(--border); margin-bottom: 20px; }
+  .results-score { font-family: 'Noto Serif SC', serif; font-size: 64px; color: var(--gold); line-height: 1; margin-bottom: 8px; }
+  .results-label { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+  .results-emoji { font-size: 32px; margin-bottom: 12px; }
+
+  /* WORDS LIST */
+  .words-list { display: grid; gap: 8px; }
+  .word-card { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; animation: slideIn 0.25s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .word-card-top { display: flex; align-items: center; gap: 12px; }
+  .word-char { font-family: 'Noto Serif SC', serif; font-size: 28px; min-width: 40px; text-align: center; color: var(--ink); }
+  .word-info { flex: 1; }
+  .word-pinyin { font-family: 'Spectral', serif; font-style: italic; font-size: 13px; color: var(--red); }
+  .word-ru { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .word-example { font-size: 12px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-style: italic; line-height: 1.5; }
+  .word-example span { font-family: 'Noto Serif SC', serif; font-style: normal; color: var(--ink); font-size: 13px; }
+
+  .empty-list { text-align: center; padding: 40px 20px; color: var(--muted); font-style: italic; font-size: 14px; }
+
+  /* STATS */
+  .stat-row { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .stat-label { font-size: 14px; color: var(--muted); }
+  .stat-val { font-family: 'Source Code Pro', monospace; font-size: 18px; color: var(--gold); font-weight: 600; }
+  .section-title { font-family: 'Noto Serif SC', serif; font-size: 13px; letter-spacing: 1px; color: var(--gold); margin: 20px 0 10px; text-transform: uppercase; }
+  .btn-reset { width: 100%; padding: 12px; background: none; border: 2px solid var(--border); border-radius: 4px; font-family: 'Spectral', serif; font-size: 13px; color: var(--muted); cursor: pointer; margin-top: 8px; letter-spacing: 0.5px; }
+
+  .sync-status { font-family: 'Source Code Pro', monospace; font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
+  .sync-status.ok { color: var(--green); }
+  .sync-status.err { color: var(--red); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--ink); color: var(--gold-light); padding: 10px 20px; border-radius: 4px; font-family: 'Spectral', serif; font-size: 13px; letter-spacing: 0.5px; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .info-box { background: var(--paper2); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+  .info-box b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">汉字卡片</div>
+    <div class="header-sub">Китайские карточки</div>
+  </div>
+  <div class="header-right">
+    <div class="header-count" id="headerCount">0 слов</div>
+    <button class="btn-sync" id="btnSync" onclick="syncNow()">↻ Обновить</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('study', this)">📖 Учить</button>
+  <button class="tab" onclick="showTab('words', this)">📝 Слова</button>
+  <button class="tab" onclick="showTab('settings', this)">⚙️ Настройки</button>
+  <button class="tab" onclick="showTab('stats', this)">📊 Стат.</button>
+</div>
+
+<!-- STUDY -->
+<div class="screen active" id="screen-study" style="padding-bottom:80px">
+  <div id="study-empty" class="study-empty" style="display:none">
+    <div class="big-char">汉</div>
+    <p>Добавь ссылку на Google Таблицу<br>во вкладке «Настройки»</p>
+  </div>
+  <div id="study-few" class="study-empty" style="display:none">
+    <div class="big-char">二</div>
+    <p>Нужно минимум <b>2 слова</b><br>для режима с вариантами ответа</p>
+  </div>
+  <div id="study-main" style="display:none">
+    <div class="mode-selector">
+      <button class="mode-btn active" id="modeBtn-zh" onclick="setMode('zh')">中→РУС</button>
+      <button class="mode-btn" id="modeBtn-ru" onclick="setMode('ru')">РУС→中</button>
+      <button class="mode-btn" id="modeBtn-pin" onclick="setMode('pin')">РУС→Пиньинь</button>
+    </div>
+    <div class="progress-label" id="progressLabel"></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="card">
+      <div class="card-mode-label" id="cardModeLabel"></div>
+      <div class="card-char" id="cardChar"></div>
+      <div class="card-pinyin" id="cardPinyin"></div>
+      <div class="card-ru" id="cardRu"></div>
+      <div class="example-box" id="exampleBox">
+        <div class="example-label">Пример использования</div>
+        <div class="example-zh" id="exampleZh"></div>
+        <div class="example-ru" id="exampleRu"></div>
+      </div>
+    </div>
+    <div class="choices" id="choices"></div>
+    <div id="btnNextWrap" style="position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:var(--paper);border-top:1px solid var(--border);display:none;z-index:50">
+      <button class="btn-next" id="btnNext" onclick="nextCard()">Следующее слово →</button>
+    </div>
+  </div>
+  <div id="study-results" style="display:none">
+    <div class="results-box">
+      <div class="results-emoji" id="resultsEmoji"></div>
+      <div class="results-score" id="resultsScore"></div>
+      <div class="results-label" id="resultsLabel"></div>
+    </div>
+    <button class="btn-next" onclick="restartStudy()">Начать заново</button>
+  </div>
+</div>
+
+<!-- WORDS -->
+<div class="screen" id="screen-words">
+  <div class="words-list" id="wordsList"></div>
+  <div class="empty-list" id="emptyList" style="display:none">Слов нет — добавь ссылку на таблицу в настройках</div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="screen-settings">
+  <div class="settings-box">
+    <div class="settings-title">🔗 Apps Script URL</div>
+    <div class="info-box">
+      Вставь ссылку на твой Google Apps Script — слова будут подгружаться автоматически на любом устройстве.
+    </div>
+    <label class="field-label">Ссылка на скрипт</label>
+    <input class="field-input" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
+    <button class="btn-primary" onclick="saveAndSync()">Сохранить и загрузить слова</button>
+    <div class="sync-status" id="syncStatus"></div>
+  </div>
+  <div class="settings-box">
+    <div class="settings-title">⚠️ Опасная зона</div>
+    <button class="btn-reset" style="color:#c0392b;border-color:#e0b0b0" onclick="clearAll()">Удалить все данные и статистику</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="screen" id="screen-stats">
+  <div class="section-title">Прогресс</div>
+  <div class="stat-row"><span class="stat-label">Всего слов</span><span class="stat-val" id="statTotal">0</span></div>
+  <div class="stat-row"><span class="stat-label">Сессий пройдено</span><span class="stat-val" id="statSessions">0</span></div>
+  <div class="stat-row"><span class="stat-label">Правильных ответов</span><span class="stat-val" id="statCorrect">0</span></div>
+  <div class="stat-row"><span class="stat-label">Неправильных ответов</span><span class="stat-val" id="statWrong">0</span></div>
+  <div class="stat-row"><span class="stat-label">Точность</span><span class="stat-val" id="statAcc">—</span></div>
+  <div class="section-title">Данные</div>
+  <button class="btn-reset" onclick="resetStats()">Сбросить статистику</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'hanzicards_v2';
+
+
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrBFzX0OatPhTY_bq_60ucO9a1K8aruUHjRkr32peTS8ffELY2HtIYE6C4iUGZJTKu2Q/exec';
+
+let state = {
+  scriptUrl: DEFAULT_SCRIPT_URL,
+  words: [],
+  stats: { sessions: 0, correct: 0, wrong: 0 },
+  lastSync: null
+};
+
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
+function load() { try { const d = localStorage.getItem(STORAGE_KEY); if (d) state = {...state, ...JSON.parse(d)}; } catch(e){} }
+
+// ── CSV SYNC ──
+async function saveAndSync() {
+  const url = document.getElementById('inputScriptUrl').value.trim();
+  if (!url) { showSyncStatus('Вставь ссылку', 'err'); return; }
+  state.scriptUrl = url;
+  save();
+  await fetchFromScript(url);
+}
+
+async function syncNow() {
+  if (!state.scriptUrl) { showToast('Добавь ссылку во вкладке Настройки'); return; }
+  const btn = document.getElementById('btnSync');
+  btn.textContent = '↻ ...';
+  btn.classList.add('spinning');
+  await fetchFromScript(state.scriptUrl);
+  btn.textContent = '↻ Обновить';
+  btn.classList.remove('spinning');
+}
+
+async function fetchFromScript(url) {
+  showSyncStatus('Загружаю...', '');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const words = await res.json();
+    if (!Array.isArray(words) || words.length === 0) throw new Error('Нет слов');
+    state.words = words.filter(w => w.char && w.ru);
+    state.lastSync = new Date().toLocaleTimeString('ru');
+    save();
+    renderWords();
+    updateHeader();
+    showSyncStatus(`✓ Загружено ${state.words.length} слов · ${state.lastSync}`, 'ok');
+    showToast(`Загружено ${state.words.length} слов!`);
+    showStudyState();
+    if (state.words.length >= 2) restartStudy();
+  } catch(e) {
+    showSyncStatus('Ошибка загрузки. Проверь ссылку.', 'err');
+    showToast('Ошибка загрузки');
+    console.error(e);
+  }
+}
+
+function loadFile() {}
+
+async function fetchCSV(url) {
+  // Not used in paste mode
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  // skip header (line 0)
+  const words = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i]);
+    const char = (cols[0] || '').trim();
+    const pin  = (cols[1] || '').trim();
+    const ru   = (cols[2] || '').trim();
+    const exZh = (cols[3] || '').trim();
+    const exRu = (cols[4] || '').trim();
+    if (char && ru) words.push({ char, pin, ru, exZh, exRu, id: i });
+  }
+  return words;
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function showSyncStatus(msg, cls) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status ' + cls;
+}
+
+// ── STUDY ──
+let studyMode = 'zh';
+let studyQueue = [];
+let studyIndex = 0;
+let sessionCorrect = 0;
+let sessionWrong = 0;
+let answered = false;
+
+function setMode(m) {
+  studyMode = m;
+  ['zh','ru','pin'].forEach(x => document.getElementById('modeBtn-'+x).classList.toggle('active', x===m));
+  restartStudy();
+}
+
+function restartStudy() {
+  document.getElementById('study-results').style.display = 'none';
+  const w = document.getElementById('btnNextWrap');
+  if (w) w.style.display = 'none';
+  studyQueue = shuffle([...state.words]);
+  studyIndex = 0; sessionCorrect = 0; sessionWrong = 0; answered = false;
+  showStudyState();
+  if (state.words.length >= 2) renderCard();
+}
+
+function showStudyState() {
+  const n = state.words.length;
+  document.getElementById('study-empty').style.display = n === 0 ? 'block' : 'none';
+  document.getElementById('study-few').style.display = n === 1 ? 'block' : 'none';
+  document.getElementById('study-main').style.display = n >= 2 ? 'block' : 'none';
+  document.getElementById('study-results').style.display = 'none';
+}
+
+function renderCard() {
+  if (studyIndex >= studyQueue.length) { showResults(); return; }
+  answered = false;
+  const w = studyQueue[studyIndex];
+  const total = studyQueue.length;
+  document.getElementById('progressLabel').textContent = `${studyIndex+1} / ${total}`;
+  document.getElementById('progressFill').style.width = (studyIndex / total * 100) + '%';
+  document.getElementById('btnNextWrap').style.display = 'none';
+  document.getElementById('btnNext').disabled = false;
+
+  // Hide example until answered
+  document.getElementById('exampleBox').classList.remove('visible');
+
+  if (studyMode === 'zh') {
+    document.getElementById('cardModeLabel').textContent = 'Переведи на русский';
+    document.getElementById('cardChar').textContent = w.char;
+    document.getElementById('cardPinyin').textContent = w.pin;
+    document.getElementById('cardRu').textContent = '';
+  } else if (studyMode === 'ru') {
+    document.getElementById('cardModeLabel').textContent = 'Напиши иероглиф';
+    document.getElementById('cardChar').textContent = '?';
+    document.getElementById('cardPinyin').textContent = '';
+    document.getElementById('cardRu').textContent = w.ru;
+  } else {
+    document.getElementById('cardModeLabel').textContent = 'Выбери пиньинь';
+    document.getElementById('cardChar').textContent = '?';
+    document.getElementById('cardPinyin').textContent = '';
+    document.getElementById('cardRu').textContent = w.ru;
+  }
+
+  const correctAnswer = studyMode === 'zh' ? w.ru : studyMode === 'ru' ? w.char : w.pin;
+  const distractors = state.words.filter(x => x !== w)
+    .map(x => studyMode === 'zh' ? x.ru : studyMode === 'ru' ? x.char : x.pin);
+  const options = shuffle([correctAnswer, ...shuffle(distractors).slice(0, 3)]);
+  const letters = ['А','Б','В','Г'];
+  const cont = document.getElementById('choices');
+  cont.innerHTML = '';
+  options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="choice-letter">${letters[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => chooseAnswer(opt, correctAnswer, btn, w);
+    cont.appendChild(btn);
+  });
+}
+
+function chooseAnswer(chosen, correct, btn, w) {
+  if (answered) return;
+  answered = true;
+  const isOk = chosen === correct;
+
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    const txt = b.querySelector('span:last-child').textContent;
+    if (txt === correct) b.classList.add('correct');
+    else if (b === btn && !isOk) b.classList.add('wrong');
+  });
+
+  if (isOk) {
+    sessionCorrect++; state.stats.correct++;
+  } else {
+    sessionWrong++; state.stats.wrong++;
+  }
+
+  // Show example if exists
+  if (w.exZh || w.exRu) {
+    document.getElementById('exampleZh').textContent = w.exZh || '';
+    document.getElementById('exampleRu').textContent = w.exRu || '';
+    document.getElementById('exampleBox').classList.add('visible');
+  }
+
+  save();
+  document.getElementById('btnNextWrap').style.display = 'block';
+}
+
+function nextCard() { studyIndex++; renderCard(); }
+
+function showResults() {
+  state.stats.sessions++;
+  save();
+  document.getElementById('study-main').style.display = 'none';
+  document.getElementById('study-results').style.display = 'block';
+  const total = sessionCorrect + sessionWrong;
+  const pct = total ? Math.round(sessionCorrect / total * 100) : 0;
+  document.getElementById('resultsScore').textContent = pct + '%';
+  document.getElementById('resultsLabel').textContent = `${sessionCorrect} из ${total} правильно`;
+  document.getElementById('resultsEmoji').textContent = pct >= 80 ? '🏆' : pct >= 50 ? '👍' : '💪';
+  renderStats();
+}
+
+// ── WORDS ──
+function renderWords() {
+  const list = document.getElementById('wordsList');
+  const empty = document.getElementById('emptyList');
+  list.innerHTML = '';
+  if (state.words.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  state.words.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'word-card';
+    div.innerHTML = `
+      <div class="word-card-top">
+        <div class="word-char">${w.char}</div>
+        <div class="word-info">
+          <div class="word-pinyin">${w.pin || '—'}</div>
+          <div class="word-ru">${w.ru}</div>
+        </div>
+      </div>
+      ${w.exZh ? `<div class="word-example"><span>${w.exZh}</span><br>${w.exRu || ''}</div>` : ''}
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ── STATS ──
+function renderStats() {
+  const s = state.stats;
+  const total = s.correct + s.wrong;
+  document.getElementById('statTotal').textContent = state.words.length;
+  document.getElementById('statSessions').textContent = s.sessions;
+  document.getElementById('statCorrect').textContent = s.correct;
+  document.getElementById('statWrong').textContent = s.wrong;
+  document.getElementById('statAcc').textContent = total ? Math.round(s.correct/total*100) + '%' : '—';
+}
+
+function resetStats() {
+  if (!confirm('Сбросить статистику?')) return;
+  state.stats = { sessions:0, correct:0, wrong:0 };
+  save(); renderStats(); showToast('Статистика сброшена');
+}
+
+function clearAll() {
+  if (!confirm('Удалить все данные?')) return;
+  state = { scriptUrl: state.scriptUrl, words:[], stats:{ sessions:0, correct:0, wrong:0 }, lastSync:null };
+  save(); renderWords(); renderStats(); updateHeader(); showStudyState();
+  showToast('Данные удалены');
+}
+
+// ── UI ──
+function showTab(name, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'study') { showStudyState(); if (state.words.length >= 2) restartStudy(); }
+  if (name === 'stats') renderStats();
+  if (name === 'settings' && state.scriptUrl) document.getElementById('inputScriptUrl').value = state.scriptUrl;
+}
+
+function updateHeader() {
+  const n = state.words.length;
+  document.getElementById('headerCount').textContent = n + ' ' + plural(n, 'слово','слова','слов');
+}
+
+function plural(n, a, b, c) {
+  const m = n % 100;
+  if (m >= 11 && m <= 19) return c;
+  const r = n % 10;
+  if (r === 1) return a; if (r >= 2 && r <= 4) return b; return c;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── INIT ──
+load();
+if (state.scriptUrl) document.getElementById('inputScriptUrl').value = state.scriptUrl;
+renderWords();
+updateHeader();
+showStudyState();
+if (state.words.length >= 2) restartStudy();
+if (state.lastSync) showSyncStatus(`✓ Последняя загрузка: ${state.lastSync}`, 'ok');
+// Auto-sync on load
+if (state.scriptUrl) fetchFromScript(state.scriptUrl);
+</script>
+</body>
+</html>
